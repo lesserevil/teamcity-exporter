@@ -1,0 +1,14 @@
+# TeamCity Exporter
+
+## Environment variables
+
+* `TE_LISTEN_ADDRESS` – Listen address
+* `TE_METRIC_PATH` – Metric path
+* `TE_API_LOGIN` – API login
+* `TE_API_PASSWORD` – API password
+* `TE_API_URL` – API URL
+
+## Metrics
+
+* `teamcity_up` – Was the last query of TeamCity successful
+* `teamcity_build_queue_size` – How many builds in queue at the last query

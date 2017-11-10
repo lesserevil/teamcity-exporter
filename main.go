@@ -21,7 +21,7 @@ var (
 
 	up = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "up"),
-		"Was the last query of TeamCity successful.",
+		"Was the last query of TeamCity successful",
 		nil, nil,
 	)
 
