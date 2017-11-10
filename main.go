@@ -66,6 +66,16 @@ func main() {
 	exporter.requestEndpoint("QUE", nil)
 
 	http.Handle(config.metricPath, promhttp.Handler())
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`<html>
+			<head><title>TeamCity Exporter v` + version.Version + `</title></head>
+			<body>
+			<h1>TeamCity Exporter v` + version.Version + `</h1>
+			<p><a href='` + config.metricPath + `'>Metrics</a></p>
+			</body>
+			</html>
+		`))
+	})
 	logrus.Fatal(http.ListenAndServe(config.listenAddress, nil))
 
 }
