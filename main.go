@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	namespace = "teamcity"
+	namespace    = "teamcity"
+	exporterName = "teamcity_exporter"
 )
 
 var (
@@ -33,11 +34,11 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(version.NewCollector("teamcity_exporter"))
+	prometheus.MustRegister(version.NewCollector(exporterName))
 }
 
 func versionInfo() {
-	fmt.Println(version.Print("teamcity_exporter"))
+	fmt.Println(version.Print(exporterName))
 	os.Exit(0)
 }
 
@@ -48,7 +49,7 @@ func main() {
 		versionInfo()
 	}
 
-	logrus.Infof("Starting teamcity_exporter %s...", version.Version)
+	logrus.Infof("Starting %s %s...", exporterName, version.Version)
 
 	config := NewConfig()
 	if err := config.Load(); err != nil {
