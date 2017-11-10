@@ -26,7 +26,7 @@ var (
 	)
 
 	buildQueueCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "build_queue_size"),
+		prometheus.BuildFQName(namespace, "", "build_queue_count"),
 		"How many builds in queue at the last query",
 		nil, nil,
 	)

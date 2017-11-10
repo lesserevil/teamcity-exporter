@@ -11,4 +11,4 @@
 ## Metrics
 
 * `teamcity_up` – Was the last query of TeamCity successful
-* `teamcity_build_queue_size` – How many builds in queue at the last query
+* `teamcity_build_queue_count` – How many builds in queue at the last query
