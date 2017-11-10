@@ -1,12 +1,15 @@
-.PHONY: run all linux
+.PHONY: info build
+GO = go
+PROMU = promu
 
-run:
-	@go run main.go
+info:
+	@echo "build: Go build"
+	@echo "promu: Promu download"
 
-all:
-	@mkdir -p bin/
-	@bash --norc -i ./scripts/build.sh
+build:
+	@$(PROMU) build
 
-linux:
-	@mkdir -p bin/
-	@export GOOS=linux && export GOARCH=amd64 && bash --norc -i ./scripts/build.sh
+promu:
+	@GOOS=$(shell uname -s | tr A-Z a-z) \
+		GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m))) \
+		$(GO) get -u github.com/prometheus/promu

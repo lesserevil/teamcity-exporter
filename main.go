@@ -48,7 +48,7 @@ func main() {
 		versionInfo()
 	}
 
-	logrus.Info("Starting teamcity_exporter...")
+	logrus.Infof("Starting teamcity_exporter %s...", version.Version)
 
 	config := NewConfig()
 	if err := config.Load(); err != nil {
