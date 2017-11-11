@@ -53,16 +53,12 @@ func main() {
 
 	config := NewConfig()
 	if err := config.Load(); err != nil {
-		logrus.Error(err)
+		logrus.Errorf("Configuration error: %v", err)
 		os.Exit(1)
 	}
 
 	exporter := NewExporter(config)
-
-	if err := prometheus.Register(exporter); err != nil {
-		logrus.Error(err)
-		os.Exit(1)
-	}
+	prometheus.MustRegister(exporter)
 
 	exporter.requestEndpoint("QUE", nil)
 
