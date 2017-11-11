@@ -60,8 +60,6 @@ func main() {
 	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 
-	exporter.requestEndpoint("QUE", nil)
-
 	http.Handle(config.metricPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
