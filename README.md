@@ -2,8 +2,8 @@
 
 ## Environment variables
 
-* `TE_LISTEN_ADDRESS` – Listen address
-* `TE_METRIC_PATH` – Metric path
+* `TE_LISTEN_ADDRESS` – Listen address (`:9190`)
+* `TE_METRIC_PATH` – Metric path (`/metrics`)
 * `TE_API_LOGIN` – API login
 * `TE_API_PASSWORD` – API password
 * `TE_API_URL` – API URL
