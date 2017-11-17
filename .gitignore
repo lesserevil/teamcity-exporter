@@ -20,5 +20,11 @@ _cgo_gotypes.go
 _cgo_export.*
 
 bin/
+package/
 .vagrant/
 teamcity-exporter
+.build
+dependencies-stamp
+.tarballs/
+coverage.out
+debug.test
