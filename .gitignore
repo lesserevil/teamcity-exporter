@@ -28,3 +28,6 @@ dependencies-stamp
 .tarballs/
 coverage.out
 debug.test
+teamcity-exporter.exe
+run.bat
+teamcity-exporter.exe~
