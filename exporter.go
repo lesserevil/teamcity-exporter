@@ -124,7 +124,9 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 				if err != nil {
 				} else {
 					reason := b.WaitReason
-					reasons[strings.FieldsFunc(reason, func(c rune) bool { return c == 58 })[0]]++
+					if len(reason) > 0 {
+						reasons[strings.FieldsFunc(reason, func(c rune) bool { return c == 58 })[0]]++
+					}
 				}
 			}
 			ch <- prometheus.MustNewConstMetric(
