@@ -13,8 +13,12 @@ import (
 )
 
 const (
-	namespace    = "teamcity"
-	exporterName = "teamcity_exporter"
+	namespace                 = "teamcity"
+	exporterName              = "teamcity_exporter"
+	reasonNoAgents            = "There are no compatible agents which can run this build"
+	reasonDependencies        = "Build dependencies have not been built yet"
+	reasonMaxConcurrentBuilds = "The maximum number of running builds for this configuration is reached"
+	reasonResourceUnavailalbe = "Build is waiting for the following resource to become available"
 )
 
 var (
@@ -29,6 +33,30 @@ var (
 	buildQueueCount = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "build_queue_count"),
 		"How many builds in queue at the last query",
+		nil, nil,
+	)
+
+	buildQueueWaitOnAgentCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "build_queue_wait_agent_count"),
+		"How many builds in queue waiting on an availalble agent at last query",
+		nil, nil,
+	)
+
+	buildQueueWaitOnConcurrentBuildCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "build_queue_wait_concurrent_build_count"),
+		"How many builds in queue not starting because of concurrent build limits at last query",
+		nil, nil,
+	)
+
+	buildQueueWaitOnDependenciesCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "build_queue_wait_dependencies_count"),
+		"How many builds in queue waiting on dependent builds at last query",
+		nil, nil,
+	)
+
+	buildQueueWaitOnSharedResourceCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "build_queue_wait_shared_resource_count"),
+		"How many builds in queue waiting on availalbe shared resource at last query",
 		nil, nil,
 	)
 )

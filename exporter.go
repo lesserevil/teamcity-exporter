@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -19,9 +20,19 @@ type TeamCityServer struct {
 	StartTime string `json:"startTime"`
 }
 
+type TeamCityBuildSummary struct {
+	ID int `json:"id"`
+}
+
 type TeamCityBuildQueue struct {
-	Count int    `json:"count"`
-	Href  string `json:"href"`
+	Count  int                    `json:"count"`
+	Href   string                 `json:"href"`
+	Builds []TeamCityBuildSummary `json:"build"`
+}
+
+type TeamCityBuild struct {
+	ID         int    `json:"id"`
+	WaitReason string `json:"waitReason"`
 }
 
 func NewExporter(config *Config) *Exporter {
@@ -75,6 +86,15 @@ func (e *Exporter) GetTeamCityBuildQueue() (*TeamCityBuildQueue, error) {
 	return teamCityBuildQueue, nil
 }
 
+func (e *Exporter) GetTeamCityQueuedBuild(id int) (*TeamCityBuild, error) {
+	var teamCityBuild *TeamCityBuild
+	err := e.requestEndpoint(fmt.Sprintf("app/rest/buildQueue/id:%d", id), &teamCityBuild)
+	if err != nil {
+		return nil, err
+	}
+	return teamCityBuild, nil
+}
+
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	_, err := e.GetTeamCityServerInformation()
 	if err != nil {
@@ -96,6 +116,28 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		} else {
 			ch <- prometheus.MustNewConstMetric(
 				buildQueueCount, prometheus.GaugeValue, float64(bq.Count),
+			)
+			var reasons map[string]int
+			reasons = make(map[string]int)
+			for i := 0; i < len(bq.Builds); i++ {
+				b, err := e.GetTeamCityQueuedBuild(bq.Builds[i].ID)
+				if err != nil {
+				} else {
+					reason := b.WaitReason
+					reasons[strings.FieldsFunc(reason, func(c rune) bool { return c == 58 })[0]]++
+				}
+			}
+			ch <- prometheus.MustNewConstMetric(
+				buildQueueWaitOnAgentCount, prometheus.GaugeValue, float64(reasons[reasonNoAgents]),
+			)
+			ch <- prometheus.MustNewConstMetric(
+				buildQueueWaitOnConcurrentBuildCount, prometheus.GaugeValue, float64(reasons[reasonMaxConcurrentBuilds]),
+			)
+			ch <- prometheus.MustNewConstMetric(
+				buildQueueWaitOnDependenciesCount, prometheus.GaugeValue, float64(reasons[reasonDependencies]),
+			)
+			ch <- prometheus.MustNewConstMetric(
+				buildQueueWaitOnSharedResourceCount, prometheus.GaugeValue, float64(reasons[reasonResourceUnavailalbe]),
 			)
 		}
 	}
