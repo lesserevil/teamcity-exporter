@@ -31,9 +31,9 @@ debug.test
 *.exe
 *.exe~
 __debug_bin
-vendor/github.com/prometheus/client_model/.classpath
-vendor/github.com/prometheus/client_model/.project
-vendor/github.com/prometheus/client_model/.settings/org.eclipse.core.resources.prefs
-vendor/github.com/prometheus/client_model/.settings/org.eclipse.jdt.apt.core.prefs
-vendor/github.com/prometheus/client_model/.settings/org.eclipse.jdt.core.prefs
-vendor/github.com/prometheus/client_model/.settings/org.eclipse.m2e.core.prefs
+.classpath
+.project
+org.eclipse.core.resources.prefs
+org.eclipse.jdt.apt.core.prefs
+org.eclipse.jdt.core.prefs
+org.eclipse.m2e.core.prefs
