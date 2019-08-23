@@ -23,14 +23,10 @@ type TeamCityServer struct {
 	StartTime string `json:"startTime"`
 }
 
-type TeamCityBuildSummary struct {
-	ID int `json:"id"`
-}
-
 type TeamCityBuildQueue struct {
-	Count  int                    `json:"count"`
-	href   string                 `json:"href"`
-	Builds []TeamCityBuildSummary `json:"build"`
+	Count  int             `json:"count"`
+	href   string          `json:"href"`
+	Builds []TeamCityBuild `json:"build"`
 }
 
 type TeamCityBuildType struct {
@@ -113,7 +109,7 @@ func (e *Exporter) GetTeamCityServerInformation() (*TeamCityServer, error) {
 
 func (e *Exporter) GetTeamCityBuildQueue() (*TeamCityBuildQueue, error) {
 	var teamCityBuildQueue *TeamCityBuildQueue
-	err := e.requestEndpoint("app/rest/buildQueue", &teamCityBuildQueue)
+	err := e.requestEndpoint("app/rest/buildQueue/?fields=count,href,build:(id,waitReason,href,buildType:(id,href,name,projectName,projectId))", &teamCityBuildQueue)
 	if err != nil {
 		return nil, err
 	}
@@ -167,12 +163,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	metrics := map[string]map[string]map[int]map[string]int{}
 	metrics = make(map[string]map[string]map[int]map[string]int)
 	//for each build in queue
-	for i := 0; i < len(bq.Builds); i++ {
-		b, err := e.GetTeamCityQueuedBuild(bq.Builds[i].ID)
-		if err != nil {
-			logrus.Errorf("Can't get queue build: %s", err)
-			continue
-		}
+	for _, b := range bq.Builds {
 		//get reason
 		reason := b.WaitReason
 		if len(reason) == 0 {
