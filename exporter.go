@@ -65,10 +65,6 @@ type TeamCityAgents struct {
 	Agents []TeamCityAgent `json:"agent"`
 }
 
-var (
-	agents = map[int]TeamCityAgent{}
-)
-
 func NewExporter(config *Config) *Exporter {
 	return &Exporter{
 		config: config,
@@ -192,15 +188,6 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 		for _, agent := range ca.Agents {
-			//load agent info for unknown agents
-			if _, found := agents[agent.ID]; found {
-				a, err := e.GetAgent(agent.ID)
-				if err != nil {
-					logrus.Errorf("Can't get agent: %s", err)
-					continue
-				}
-				agents[agent.ID] = *a
-			}
 			poolname := agent.Pool.Name
 			if len(poolname) == 0 {
 				poolname = "Default"
@@ -223,7 +210,6 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	logrus.Infof("agents: %+v", agents)
 	logrus.Infof("metrics: %+v", metrics)
 
 	//for each entry in metric map
