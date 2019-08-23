@@ -30,34 +30,12 @@ var (
 		nil, nil,
 	)
 
-	buildQueueCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "build_queue_count"),
-		"How many builds in queue at the last query",
-		nil, nil,
-	)
+	labels = []string{"reason", "project", "buildId", "pool"}
 
-	buildQueueWaitOnAgentCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "build_queue_wait_agent_count"),
-		"How many builds in queue waiting on an availalble agent at last query",
-		nil, nil,
-	)
-
-	buildQueueWaitOnConcurrentBuildCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "build_queue_wait_concurrent_build_count"),
-		"How many builds in queue not starting because of concurrent build limits at last query",
-		nil, nil,
-	)
-
-	buildQueueWaitOnDependenciesCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "build_queue_wait_dependencies_count"),
-		"How many builds in queue waiting on dependent builds at last query",
-		nil, nil,
-	)
-
-	buildQueueWaitOnSharedResourceCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "build_queue_wait_shared_resource_count"),
-		"How many builds in queue waiting on availalbe shared resource at last query",
-		nil, nil,
+	buildQueueWaitCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "build_queue_wait_count"),
+		"How many builds in queue waiting in queue",
+		labels, nil,
 	)
 )
 
