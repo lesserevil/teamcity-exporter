@@ -28,6 +28,12 @@ dependencies-stamp
 .tarballs/
 coverage.out
 debug.test
-teamcity-exporter.exe
-run.bat
-teamcity-exporter.exe~
+*.exe
+*.exe~
+__debug_bin
+vendor/github.com/prometheus/client_model/.classpath
+vendor/github.com/prometheus/client_model/.project
+vendor/github.com/prometheus/client_model/.settings/org.eclipse.core.resources.prefs
+vendor/github.com/prometheus/client_model/.settings/org.eclipse.jdt.apt.core.prefs
+vendor/github.com/prometheus/client_model/.settings/org.eclipse.jdt.core.prefs
+vendor/github.com/prometheus/client_model/.settings/org.eclipse.m2e.core.prefs
