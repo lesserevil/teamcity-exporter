@@ -61,6 +61,13 @@ type TeamCityAgents struct {
 	Agents []TeamCityAgent `json:"agent"`
 }
 
+type TeamCityProject struct {
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	ParentProjectID string `json:"parentProjectId"`
+	href            string `json:"href"`
+}
+
 func NewExporter(config *Config) *Exporter {
 	return &Exporter{
 		config: config,
@@ -74,7 +81,7 @@ func (e *Exporter) requestEndpoint(route string, v interface{}) error {
 	u := *e.config.apiEndpointUrl
 	r, err := u.Parse(route)
 	u = *u.ResolveReference(r)
-	logrus.Infof("url: %s", u.String())
+	logrus.Debugf("url: %s", u.String())
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return err
@@ -89,8 +96,6 @@ func (e *Exporter) requestEndpoint(route string, v interface{}) error {
 		return fmt.Errorf("Error requesting url: %s (%s)", req.URL.String(), resp.Status)
 	}
 	defer resp.Body.Close()
-	//decoder := json.NewDecoder(resp.Body)
-	//if err := decoder.Decode(&v); err != nil {
 	body, _ := ioutil.ReadAll(resp.Body)
 	if err := json.Unmarshal(body, &v); err != nil {
 		return err
@@ -144,7 +149,33 @@ func (e *Exporter) GetAgent(ID int) (*TeamCityAgent, error) {
 	return teamCityAgent, nil
 }
 
+func (e *Exporter) GetTopProject(ProjectID string, projects map[string]string) (*string, error) {
+	if _, found := projects[ProjectID]; found {
+		parent := projects[ProjectID]
+		if parent == "_Root" {
+			return &ProjectID, nil
+		} else {
+			return e.GetTopProject(parent, projects)
+		}
+	}
+	var parent *TeamCityProject
+	err := e.requestEndpoint(fmt.Sprintf("app/rest/projects/id:%v", ProjectID), &parent)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Debugf("parent: %+v", parent)
+	ParentID := parent.ParentProjectID
+	projects[ProjectID] = parent.ParentProjectID
+	if ParentID == "_Root" {
+		return &ProjectID, nil
+	} else {
+		return e.GetTopProject(ParentID, projects)
+	}
+}
+
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
+	var projects map[string]string
+	projects = make(map[string]string)
 	_, err := e.GetTeamCityServerInformation()
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(
@@ -171,7 +202,12 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			reason = reasonNoAgents
 		}
 		reason = strings.FieldsFunc(reason, func(c rune) bool { return c == ':' })[0] //strip off anything after a ":"
-		project := b.BuildType.ProjectID
+		tmpproj, err := e.GetTopProject(b.BuildType.ProjectID, projects)
+		if err != nil {
+			logrus.Errorf("Cant get project info: %s", err)
+			continue
+		}
+		project := *tmpproj
 		//get list of compatible agents
 		ca, err := e.GetCompatibleAgents(b.ID)
 		if err != nil {
@@ -184,7 +220,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 				poolname = "Default"
 			}
 			buildID := int(b.ID)
-			//add metric to metric map for reason, pool, and project
+			//add metric to metric map for id, reason, pool, and project
 			if _, found := metrics[reason]; !found {
 				metrics[reason] = make(map[string]map[int]map[string]int)
 			}
@@ -201,7 +237,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	logrus.Infof("metrics: %+v", metrics)
+	logrus.Debugf("metrics: %+v", metrics)
 
 	//for each entry in metric map
 	for reason, projmap := range metrics {
