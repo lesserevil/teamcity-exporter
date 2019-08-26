@@ -198,8 +198,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		//get reason
 		reason := b.WaitReason
 		if len(reason) == 0 {
-			logrus.Warningf("Build has no reason: %+v", b)
-			reason = reasonNoAgents
+			logrus.Infof("Build has no reason: %+v", b)
+			reason = reasonDefault
 		}
 		reason = strings.FieldsFunc(reason, func(c rune) bool { return c == ':' })[0] //strip off anything after a ":"
 		tmpproj, err := e.GetTopProject(b.BuildType.ProjectID, projects)

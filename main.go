@@ -13,12 +13,9 @@ import (
 )
 
 const (
-	namespace                 = "teamcity"
-	exporterName              = "teamcity_exporter"
-	reasonNoAgents            = "There are no compatible agents which can run this build"
-	reasonDependencies        = "Build dependencies have not been built yet"
-	reasonMaxConcurrentBuilds = "The maximum number of running builds for this configuration is reached"
-	reasonResourceUnavailalbe = "Build is waiting for the following resource to become available"
+	namespace     = "teamcity"
+	exporterName  = "teamcity_queue_exporter"
+	reasonDefault = "There are no compatible or available agents for this build"
 )
 
 var (
@@ -69,9 +66,9 @@ func main() {
 	http.Handle(config.metricPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
-			<head><title>TeamCity Exporter v` + version.Version + `</title></head>
+			<head><title>TeamCity Queue Exporter v` + version.Version + `</title></head>
 			<body>
-			<h1>TeamCity Exporter v` + version.Version + `</h1>
+			<h1>TeamCity Queue Exporter v` + version.Version + `</h1>
 			<p><a href='` + config.metricPath + `'>Metrics</a></p>
 			</body>
 			</html>
