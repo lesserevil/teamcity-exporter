@@ -56,7 +56,7 @@ func versionInfo() {
 func main() {
 	flag.Parse()
 
-	logrus.SetLevel(logrus.DebugLevel)
+	//logrus.SetLevel(logrus.DebugLevel)
 
 	if *showVersion == true {
 		versionInfo()
