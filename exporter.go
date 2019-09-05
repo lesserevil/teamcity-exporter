@@ -86,6 +86,7 @@ type TeamCityAgent struct {
 	Pool           TeamCityPool       `json:"pool"`
 	EnabledInfo    TeamCityInfo       `json:"enabledInfo",omitifempty`
 	AuthorizedInfo TeamCityInfo       `json:"authorizedInfo",omitifemtpy`
+	Connected      bool               `json:"connected",omitifempty`
 	Properties     TeamCityProperties `json:"properties",omitifempty`
 }
 
@@ -183,7 +184,7 @@ func (e *Exporter) GetAgent(ID int) (*TeamCityAgent, error) {
 
 func (e *Exporter) GetAllAgents() (*TeamCityAgents, error) {
 	var agents *TeamCityAgents
-	err := e.requestEndpoint("http://teamcity.nvidia.com/app/rest/agents?locator=authorized:any,defaultFilter:false&fields=agent:(id,href,enabledInfo,authorizedInfo,pool,name,properties:(property))", &agents)
+	err := e.requestEndpoint("http://teamcity.nvidia.com/app/rest/agents?locator=authorized:any,defaultFilter:false&fields=agent:(id,href,enabledInfo,authorizedInfo,connected,pool,name,properties:(property))", &agents)
 	if err != nil {
 		return nil, err
 	}
@@ -294,8 +295,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	var agentInfo map[string]map[string]map[string]map[string]int
-	agentInfo = make(map[string]map[string]map[string]map[string]int)
+	var agentInfo map[string]map[string]map[string]map[string]map[string]int
+	agentInfo = make(map[string]map[string]map[string]map[string]map[string]int)
 
 	var allAgents, _ = e.GetAllAgents()
 
@@ -305,28 +306,34 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		var os = agent.Properties["system.feature.agent.os"]
 		var enabled = strconv.FormatBool(agent.EnabledInfo.Status)
 		var authorized = strconv.FormatBool(agent.AuthorizedInfo.Status)
+		var connected = strconv.FormatBool(agent.Connected)
 
 		if _, found := agentInfo[pool]; !found {
-			agentInfo[pool] = make(map[string]map[string]map[string]int)
+			agentInfo[pool] = make(map[string]map[string]map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][os]; !found {
-			agentInfo[pool][os] = make(map[string]map[string]int)
+			agentInfo[pool][os] = make(map[string]map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][os][enabled]; !found {
-			agentInfo[pool][os][enabled] = make(map[string]int)
+			agentInfo[pool][os][enabled] = make(map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][os][enabled][authorized]; !found {
-			agentInfo[pool][os][enabled][authorized] = 0
+			agentInfo[pool][os][enabled][authorized] = make(map[string]int)
 		}
-		agentInfo[pool][os][enabled][authorized]++
+		if _, found := agentInfo[pool][os][enabled][authorized][connected]; !found {
+			agentInfo[pool][os][enabled][authorized][connected] = 0
+		}
+		agentInfo[pool][os][enabled][authorized][connected]++
 	}
 
 	for poolname, osmap := range agentInfo {
 		for osname, enabledmap := range osmap {
 			for enabled, authorizedmap := range enabledmap {
-				for authorized, count := range authorizedmap {
-					ch <- prometheus.MustNewConstMetric(
-						agentInfoCount, prometheus.GaugeValue, float64(count), poolname, osname, enabled, authorized)
+				for authorized, connectedmap := range authorizedmap {
+					for connected, count := range connectedmap {
+						ch <- prometheus.MustNewConstMetric(
+							agentInfoCount, prometheus.GaugeValue, float64(count), poolname, osname, enabled, authorized, connected)
+					}
 				}
 			}
 		}
