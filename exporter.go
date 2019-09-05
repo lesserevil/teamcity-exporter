@@ -50,11 +50,43 @@ type TeamCityPool struct {
 	href string `json:"href"`
 }
 
+type TeamCityInfo struct {
+	Status bool `json:"status"`
+}
+
+type TeamCityProperties map[string]string
+
+func (p *TeamCityProperties) UnmarshalJSON(b []byte) error {
+	var s map[string]interface{}
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	var ptmp = make(TeamCityProperties)
+
+	var props = s["property"].([]interface{})
+
+	for _, prop := range props {
+		var proptmp = prop.(map[string]interface{})
+		var name = proptmp["name"].(string)
+		var value = proptmp["value"].(string)
+		ptmp[name] = value
+	}
+
+	*p = make(TeamCityProperties)
+	*p = ptmp
+
+	return nil
+}
+
 type TeamCityAgent struct {
-	ID   int          `json:"id"`
-	href string       `json:"href"`
-	Name string       `json:"name"`
-	Pool TeamCityPool `json:"pool"`
+	ID             int                `json:"id"`
+	href           string             `json:"href"`
+	Name           string             `json:"name"`
+	Pool           TeamCityPool       `json:"pool"`
+	EnabledInfo    TeamCityInfo       `json:"enabledInfo",omitifempty`
+	AuthorizedInfo TeamCityInfo       `json:"authorizedInfo",omitifemtpy`
+	Properties     TeamCityProperties `json:"properties",omitifempty`
 }
 
 type TeamCityAgents struct {
@@ -149,6 +181,15 @@ func (e *Exporter) GetAgent(ID int) (*TeamCityAgent, error) {
 	return teamCityAgent, nil
 }
 
+func (e *Exporter) GetAllAgents() (*TeamCityAgents, error) {
+	var agents *TeamCityAgents
+	err := e.requestEndpoint("http://teamcity.nvidia.com/app/rest/agents?locator=authorized:any,defaultFilter:false&fields=agent:(id,href,enabledInfo,authorizedInfo,pool,name,properties:(property))", &agents)
+	if err != nil {
+		return nil, err
+	}
+	return agents, nil
+}
+
 func (e *Exporter) GetTopProject(ProjectID string, projects map[string]string) (*string, error) {
 	if _, found := projects[ProjectID]; found {
 		parent := projects[ProjectID]
@@ -195,6 +236,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	metrics = make(map[string]map[string]map[int]map[string]int)
 	//for each build in queue
 	for _, b := range bq.Builds {
+		logrus.Debugf("b: %+v", b)
 		//get reason
 		reason := b.WaitReason
 		if len(reason) == 0 {
@@ -247,6 +289,44 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 					//publish metric
 					ch <- prometheus.MustNewConstMetric(
 						buildQueueWaitCount, prometheus.GaugeValue, float64(count), reason, project, strconv.Itoa(id), poolname)
+				}
+			}
+		}
+	}
+
+	var agentInfo map[string]map[string]map[string]map[string]int
+	agentInfo = make(map[string]map[string]map[string]map[string]int)
+
+	var allAgents, _ = e.GetAllAgents()
+
+	for _, agent := range allAgents.Agents {
+
+		var pool = agent.Pool.Name
+		var os = agent.Properties["system.feature.agent.os"]
+		var enabled = strconv.FormatBool(agent.EnabledInfo.Status)
+		var authorized = strconv.FormatBool(agent.AuthorizedInfo.Status)
+
+		if _, found := agentInfo[pool]; !found {
+			agentInfo[pool] = make(map[string]map[string]map[string]int)
+		}
+		if _, found := agentInfo[pool][os]; !found {
+			agentInfo[pool][os] = make(map[string]map[string]int)
+		}
+		if _, found := agentInfo[pool][os][enabled]; !found {
+			agentInfo[pool][os][enabled] = make(map[string]int)
+		}
+		if _, found := agentInfo[pool][os][enabled][authorized]; !found {
+			agentInfo[pool][os][enabled][authorized] = 0
+		}
+		agentInfo[pool][os][enabled][authorized]++
+	}
+
+	for poolname, osmap := range agentInfo {
+		for osname, enabledmap := range osmap {
+			for enabled, authorizedmap := range enabledmap {
+				for authorized, count := range authorizedmap {
+					ch <- prometheus.MustNewConstMetric(
+						agentInfoCount, prometheus.GaugeValue, float64(count), poolname, osname, enabled, authorized)
 				}
 			}
 		}

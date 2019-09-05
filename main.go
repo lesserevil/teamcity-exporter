@@ -27,12 +27,20 @@ var (
 		nil, nil,
 	)
 
-	labels = []string{"reason", "project", "buildId", "pool"}
+	buildLabels = []string{"reason", "project", "buildId", "pool"}
+
+	agentLabels = []string{"pool", "os", "enabled", "authorized"}
 
 	buildQueueWaitCount = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "build_queue_wait_count"),
 		"How many builds in queue waiting in queue",
-		labels, nil,
+		buildLabels, nil,
+	)
+
+	agentInfoCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "agent_type_count"),
+		"How many agents by metadata",
+		agentLabels, nil,
 	)
 )
 
@@ -47,6 +55,8 @@ func versionInfo() {
 
 func main() {
 	flag.Parse()
+
+	logrus.SetLevel(logrus.DebugLevel)
 
 	if *showVersion == true {
 		versionInfo()
