@@ -29,7 +29,7 @@ var (
 
 	buildLabels = []string{"reason", "project", "buildId", "pool"}
 
-	agentLabels = []string{"pool", "os", "enabled", "authorized", "connected"}
+	agentLabels = []string{"pool", "os", "enabled", "authorized", "connected", "busy"}
 
 	buildQueueWaitCount = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "build_queue_wait_count"),
