@@ -245,6 +245,11 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			reason = reasonDefault
 		}
 		reason = strings.FieldsFunc(reason, func(c rune) bool { return c == ':' })[0] //strip off anything after a ":"
+		reason = strings.FieldsFunc(reason, func(c rune) bool { return c == ',' })[0] //strip off anything after a ","
+		for len(strings.FieldsFunc(reason, func(c rune) bool { return c == '"' })) >= 2 {
+			var tmp = strings.FieldsFunc(reason, func(c rune) bool { return c == '"' })
+			reason = tmp[0] + strings.Join(tmp[2:], "\"")
+		}
 		tmpproj, err := e.GetTopProject(b.BuildType.ProjectID, projects)
 		if err != nil {
 			logrus.Errorf("Cant get project info: %s", err)
@@ -303,7 +308,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	for _, agent := range allAgents.Agents {
 
 		var pool = agent.Pool.Name
-		var os = agent.Properties["system.feature.agent.os"]
+		var agentos = agent.Properties["system.feature.agent.os"]
 		var enabled = strconv.FormatBool(agent.EnabledInfo.Status)
 		var authorized = strconv.FormatBool(agent.AuthorizedInfo.Status)
 		var connected = strconv.FormatBool(agent.Connected)
@@ -311,19 +316,19 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		if _, found := agentInfo[pool]; !found {
 			agentInfo[pool] = make(map[string]map[string]map[string]map[string]int)
 		}
-		if _, found := agentInfo[pool][os]; !found {
-			agentInfo[pool][os] = make(map[string]map[string]map[string]int)
+		if _, found := agentInfo[pool][agentos]; !found {
+			agentInfo[pool][agentos] = make(map[string]map[string]map[string]int)
 		}
-		if _, found := agentInfo[pool][os][enabled]; !found {
-			agentInfo[pool][os][enabled] = make(map[string]map[string]int)
+		if _, found := agentInfo[pool][agentos][enabled]; !found {
+			agentInfo[pool][agentos][enabled] = make(map[string]map[string]int)
 		}
-		if _, found := agentInfo[pool][os][enabled][authorized]; !found {
-			agentInfo[pool][os][enabled][authorized] = make(map[string]int)
+		if _, found := agentInfo[pool][agentos][enabled][authorized]; !found {
+			agentInfo[pool][agentos][enabled][authorized] = make(map[string]int)
 		}
-		if _, found := agentInfo[pool][os][enabled][authorized][connected]; !found {
-			agentInfo[pool][os][enabled][authorized][connected] = 0
+		if _, found := agentInfo[pool][agentos][enabled][authorized][connected]; !found {
+			agentInfo[pool][agentos][enabled][authorized][connected] = 0
 		}
-		agentInfo[pool][os][enabled][authorized][connected]++
+		agentInfo[pool][agentos][enabled][authorized][connected]++
 	}
 
 	for poolname, osmap := range agentInfo {
