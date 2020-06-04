@@ -196,7 +196,7 @@ func (e *Exporter) GetAllAgents() (*TeamCityAgents, error) {
 
 func (e *Exporter) GetRunningBuilds() (*TeamCityBuilds, error) {
 	var builds *TeamCityBuilds
-	err := e.requestEndpoint("app/rest/builds?locator=running:true&fields=count,href,build(agent:(id,href,name,pool))", &builds)
+	err := e.requestEndpoint("app/rest/builds?locator=running:true&fields=count,href,build(buildType,agent:(id,href,name,pool))", &builds)
 	if err != nil {
 		return nil, err
 	}
@@ -312,8 +312,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	var agentInfo map[string]map[string]map[string]map[string]map[string]map[string]int
-	agentInfo = make(map[string]map[string]map[string]map[string]map[string]map[string]int)
+	var agentInfo map[string]map[string]map[string]map[string]map[string]map[string]map[string]int
+	agentInfo = make(map[string]map[string]map[string]map[string]map[string]map[string]map[string]int)
 
 	var allAgents, _ = e.GetAllAgents()
 	var runningBuilds, _ = e.GetRunningBuilds()
@@ -331,39 +331,55 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		var authorized = strconv.FormatBool(agent.AuthorizedInfo.Status)
 		var connected = strconv.FormatBool(agent.Connected)
 		var busy = strconv.FormatBool(false)
+		var project = ""
 		if _, found := runningAgents[agent.ID]; found {
 			busy = strconv.FormatBool(true)
 		}
+		if busy == "true" {
+			for _, b := range runningBuilds.Builds {
+				if agent.ID == b.Agent.ID {
+					logrus.Infof(b.BuildType.ProjectName)
+					var tmpproj, _ = e.GetTopProject(b.BuildType.ProjectID, projects)
+					project = *tmpproj
+				}
+			}
+		}
+		logrus.Debugf(project)
 
 		if _, found := agentInfo[pool]; !found {
-			agentInfo[pool] = make(map[string]map[string]map[string]map[string]map[string]int)
+			agentInfo[pool] = make(map[string]map[string]map[string]map[string]map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][agentos]; !found {
-			agentInfo[pool][agentos] = make(map[string]map[string]map[string]map[string]int)
+			agentInfo[pool][agentos] = make(map[string]map[string]map[string]map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][agentos][enabled]; !found {
-			agentInfo[pool][agentos][enabled] = make(map[string]map[string]map[string]int)
+			agentInfo[pool][agentos][enabled] = make(map[string]map[string]map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][agentos][enabled][authorized]; !found {
-			agentInfo[pool][agentos][enabled][authorized] = make(map[string]map[string]int)
+			agentInfo[pool][agentos][enabled][authorized] = make(map[string]map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][agentos][enabled][authorized][connected]; !found {
-			agentInfo[pool][agentos][enabled][authorized][connected] = make(map[string]int)
+			agentInfo[pool][agentos][enabled][authorized][connected] = make(map[string]map[string]int)
 		}
-		if _, found := agentInfo[pool][agentos][enabled][authorized][connected][busy]; !found {
-			agentInfo[pool][agentos][enabled][authorized][connected][busy] = 0
+		if _, found := agentInfo[pool][agentos][enabled][authorized][connected][project]; !found {
+			agentInfo[pool][agentos][enabled][authorized][connected][project] = make(map[string]int)
 		}
-		agentInfo[pool][agentos][enabled][authorized][connected][busy]++
+		if _, found := agentInfo[pool][agentos][enabled][authorized][connected][project][busy]; !found {
+			agentInfo[pool][agentos][enabled][authorized][connected][project][busy] = 0
+		}
+		agentInfo[pool][agentos][enabled][authorized][connected][project][busy]++
 	}
 
 	for poolname, osmap := range agentInfo {
 		for osname, enabledmap := range osmap {
 			for enabled, authorizedmap := range enabledmap {
 				for authorized, connectedmap := range authorizedmap {
-					for connected, busymap := range connectedmap {
-						for busy, count := range busymap {
-							ch <- prometheus.MustNewConstMetric(
-								agentInfoCount, prometheus.GaugeValue, float64(count), poolname, osname, enabled, authorized, connected, busy)
+					for connected, projectmap := range connectedmap {
+						for project, busymap := range projectmap {
+							for busy, count := range busymap {
+								ch <- prometheus.MustNewConstMetric(
+									agentInfoCount, prometheus.GaugeValue, float64(count), poolname, osname, enabled, authorized, connected, project, busy)
+							}
 						}
 					}
 				}
