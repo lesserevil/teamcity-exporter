@@ -326,7 +326,12 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	for _, agent := range allAgents.Agents {
 
 		var pool = agent.Pool.Name
-		var agentos = agent.Properties["system.feature.agent.os"]
+		var agentos = "Other"
+		if _, ok := agent.Properties["system.feature.windows.version"]; ok {
+			agentos = "Windows"
+		} else if _, ok := agent.Properties["system.feature.linux.version"]; ok {
+			agentos = "Linux"
+		}
 		var enabled = strconv.FormatBool(agent.EnabledInfo.Status)
 		var authorized = strconv.FormatBool(agent.AuthorizedInfo.Status)
 		var connected = strconv.FormatBool(agent.Connected)
