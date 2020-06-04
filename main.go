@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -55,8 +56,10 @@ func versionInfo() {
 
 func main() {
 	flag.Parse()
-
-	//logrus.SetLevel(logrus.DebugLevel)
+	
+	if strings.ToLower(os.Getenv("TE_DEBUG")) == "true" {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
 
 	if *showVersion == true {
 		versionInfo()

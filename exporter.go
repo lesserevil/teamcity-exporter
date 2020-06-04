@@ -108,7 +108,7 @@ func NewExporter(config *Config) *Exporter {
 	return &Exporter{
 		config: config,
 		httpClient: &http.Client{
-			Timeout: 5 * time.Second,
+			Timeout: 10 * time.Second,
 		},
 	}
 }
