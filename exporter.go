@@ -343,7 +343,6 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		if busy == "true" {
 			for _, b := range runningBuilds.Builds {
 				if agent.ID == b.Agent.ID {
-					logrus.Infof(b.BuildType.ProjectName)
 					var tmpproj, _ = e.GetTopProject(b.BuildType.ProjectID, projects)
 					project = *tmpproj
 				}
