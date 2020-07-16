@@ -168,7 +168,7 @@ func (e *Exporter) GetTeamCityQueuedBuild(id int) (*TeamCityBuild, error) {
 
 func (e *Exporter) GetCompatibleAgents(id int) (*TeamCityAgents, error) {
 	var teamCityAgents *TeamCityAgents
-	err := e.requestEndpoint(fmt.Sprintf("app/rest/agents?locator=compatible:(build:(id:%d))&fields=agent:(id,href,pool,name)", id), &teamCityAgents)
+	err := e.requestEndpoint(fmt.Sprintf("app/rest/agents?locator=compatible:(build:(id:%d))&fields=agent:(id,href,pool,name,properties(property))", id), &teamCityAgents)
 	if err != nil {
 		logrus.Errorf("Can't get compatible agents: %s", err)
 		return nil, err
@@ -187,7 +187,7 @@ func (e *Exporter) GetAgent(ID int) (*TeamCityAgent, error) {
 
 func (e *Exporter) GetAllAgents() (*TeamCityAgents, error) {
 	var agents *TeamCityAgents
-	err := e.requestEndpoint("app/rest/agents?locator=authorized:any,defaultFilter:false&fields=agent:(id,href,enabledInfo,authorizedInfo,connected,pool,name,properties:(property))", &agents)
+	err := e.requestEndpoint("app/rest/agents?locator=authorized:any,defaultFilter:false&fields=agent:(id,href,enabledInfo,authorizedInfo,connected,pool,name,properties(property))", &agents)
 	if err != nil {
 		return nil, err
 	}
@@ -245,8 +245,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		logrus.Errorf("Can't get build queue: %s", err)
 		return
 	}
-	metrics := map[string]map[string]map[int]map[string]int{}
-	metrics = make(map[string]map[string]map[int]map[string]int)
+	metrics := map[string]map[string]map[int]map[string]map[bool]map[bool]map[bool]int{}
+	metrics = make(map[string]map[string]map[int]map[string]map[bool]map[bool]map[bool]int)
 	//for each build in queue
 	for _, b := range bq.Builds {
 		logrus.Debugf("b: %+v", b)
@@ -280,20 +280,30 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 				poolname = "Default"
 			}
 			buildID := int(b.ID)
-			//add metric to metric map for id, reason, pool, and project
+			//add metric to metric map for id, reason, pool, project, and allowed OS
 			if _, found := metrics[reason]; !found {
-				metrics[reason] = make(map[string]map[int]map[string]int)
+				metrics[reason] = make(map[string]map[int]map[string]map[bool]map[bool]map[bool]int)
 			}
 			if _, found := metrics[reason][project]; !found {
-				metrics[reason][project] = make(map[int]map[string]int)
+				metrics[reason][project] = make(map[int]map[string]map[bool]map[bool]map[bool]int)
 			}
 			if _, found := metrics[reason][project][b.ID]; !found {
-				metrics[reason][project][buildID] = make(map[string]int)
+				metrics[reason][project][buildID] = make(map[string]map[bool]map[bool]map[bool]int)
 			}
 			if _, found := metrics[reason][project][buildID][poolname]; !found {
-				metrics[reason][project][buildID][poolname] = 0
+				metrics[reason][project][buildID][poolname] = make(map[bool]map[bool]map[bool]int)
 			}
-			metrics[reason][project][buildID][poolname] = 1
+			var winOk = false
+			var linOk = false
+			var macOk = false
+			for _, a := range ca.Agents {
+				winOk = winOk || strings.Contains(a.Properties["teamcity.agent.jvm.os.name"], "Windows")
+				linOk = linOk || strings.Contains(a.Properties["teamcity.agent.jvm.os.name"], "Linux")
+				macOk = macOk || strings.Contains(a.Properties["teamcity.agent.jvm.os.name"], "Mac")
+			}
+			metrics[reason][project][buildID][poolname][winOk] = make(map[bool]map[bool]int)
+			metrics[reason][project][buildID][poolname][winOk][linOk] = make(map[bool]int)
+			metrics[reason][project][buildID][poolname][winOk][linOk][macOk] = 1
 		}
 	}
 
@@ -303,10 +313,17 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	for reason, projmap := range metrics {
 		for project, idmap := range projmap {
 			for id, poolmap := range idmap {
-				for poolname, count := range poolmap {
-					//publish metric
-					ch <- prometheus.MustNewConstMetric(
-						buildQueueWaitCount, prometheus.GaugeValue, float64(count), reason, project, strconv.Itoa(id), poolname)
+				for poolname, winmap := range poolmap {
+					for win, linmap := range winmap {
+						for lin, macmap := range linmap {
+							for mac, count := range macmap {
+								//publish metric
+								ch <- prometheus.MustNewConstMetric(
+									buildQueueWaitCount, prometheus.GaugeValue, float64(count), reason, project, strconv.Itoa(id), poolname,
+									strconv.FormatBool(win), strconv.FormatBool(lin), strconv.FormatBool(mac))
+							}
+						}
+					}
 				}
 			}
 		}

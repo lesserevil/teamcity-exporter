@@ -28,7 +28,7 @@ var (
 		nil, nil,
 	)
 
-	buildLabels = []string{"reason", "project", "buildId", "pool"}
+	buildLabels = []string{"reason", "project", "buildId", "pool", "winOk", "linOk", "macOk"}
 
 	agentLabels = []string{"pool", "os", "enabled", "authorized", "connected", "project", "busy"}
 
@@ -56,7 +56,7 @@ func versionInfo() {
 
 func main() {
 	flag.Parse()
-	
+
 	if strings.ToLower(os.Getenv("TE_DEBUG")) == "true" {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
