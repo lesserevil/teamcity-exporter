@@ -329,8 +329,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	var agentInfo map[string]map[string]map[string]map[string]map[string]map[string]map[string]int
-	agentInfo = make(map[string]map[string]map[string]map[string]map[string]map[string]map[string]int)
+	var agentInfo map[string]map[string]map[string]map[string]map[string]map[string]map[string]map[string]int
+	agentInfo = make(map[string]map[string]map[string]map[string]map[string]map[string]map[string]map[string]int)
 
 	var allAgents, _ = e.GetAllAgents()
 	var runningBuilds, _ = e.GetRunningBuilds()
@@ -342,6 +342,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 	for _, agent := range allAgents.Agents {
 
+		var name = agent.Name
 		var pool = agent.Pool.Name
 		var agentos = "Other"
 		if _, ok := agent.Properties["system.feature.windows.version"]; ok {
@@ -367,39 +368,44 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		}
 		logrus.Debugf(project)
 
+		if _, found := agentInfo[name]; !found {
+			agentInfo[name] = make(map[string]map[string]map[string]map[string]map[string]map[string]map[string]int)
+		}
 		if _, found := agentInfo[pool]; !found {
-			agentInfo[pool] = make(map[string]map[string]map[string]map[string]map[string]map[string]int)
+			agentInfo[name][pool] = make(map[string]map[string]map[string]map[string]map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][agentos]; !found {
-			agentInfo[pool][agentos] = make(map[string]map[string]map[string]map[string]map[string]int)
+			agentInfo[name][pool][agentos] = make(map[string]map[string]map[string]map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][agentos][enabled]; !found {
-			agentInfo[pool][agentos][enabled] = make(map[string]map[string]map[string]map[string]int)
+			agentInfo[name][pool][agentos][enabled] = make(map[string]map[string]map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][agentos][enabled][authorized]; !found {
-			agentInfo[pool][agentos][enabled][authorized] = make(map[string]map[string]map[string]int)
+			agentInfo[name][pool][agentos][enabled][authorized] = make(map[string]map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][agentos][enabled][authorized][connected]; !found {
-			agentInfo[pool][agentos][enabled][authorized][connected] = make(map[string]map[string]int)
+			agentInfo[name][pool][agentos][enabled][authorized][connected] = make(map[string]map[string]int)
 		}
 		if _, found := agentInfo[pool][agentos][enabled][authorized][connected][project]; !found {
-			agentInfo[pool][agentos][enabled][authorized][connected][project] = make(map[string]int)
+			agentInfo[name][pool][agentos][enabled][authorized][connected][project] = make(map[string]int)
 		}
 		if _, found := agentInfo[pool][agentos][enabled][authorized][connected][project][busy]; !found {
-			agentInfo[pool][agentos][enabled][authorized][connected][project][busy] = 0
+			agentInfo[name][pool][agentos][enabled][authorized][connected][project][busy] = 0
 		}
-		agentInfo[pool][agentos][enabled][authorized][connected][project][busy]++
+		agentInfo[name][pool][agentos][enabled][authorized][connected][project][busy]++
 	}
 
-	for poolname, osmap := range agentInfo {
-		for osname, enabledmap := range osmap {
-			for enabled, authorizedmap := range enabledmap {
-				for authorized, connectedmap := range authorizedmap {
-					for connected, projectmap := range connectedmap {
-						for project, busymap := range projectmap {
-							for busy, count := range busymap {
-								ch <- prometheus.MustNewConstMetric(
-									agentInfoCount, prometheus.GaugeValue, float64(count), poolname, osname, enabled, authorized, connected, project, busy)
+	for name, poolmap := range agentInfo {
+		for poolname, osmap := range poolmap {
+			for osname, enabledmap := range osmap {
+				for enabled, authorizedmap := range enabledmap {
+					for authorized, connectedmap := range authorizedmap {
+						for connected, projectmap := range connectedmap {
+							for project, busymap := range projectmap {
+								for busy, count := range busymap {
+									ch <- prometheus.MustNewConstMetric(
+										agentInfoCount, prometheus.GaugeValue, float64(count), name, poolname, osname, enabled, authorized, connected, project, busy)
+								}
 							}
 						}
 					}
